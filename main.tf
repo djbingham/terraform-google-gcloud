@@ -117,7 +117,6 @@ resource "null_resource" "download_jq" {
   }, var.create_cmd_triggers)
 
   provisioner "local-exec" {
-    when    = create
     command = self.triggers.download_jq_command
   }
 
@@ -136,7 +135,6 @@ resource "null_resource" "decompress" {
   }, var.create_cmd_triggers)
 
   provisioner "local-exec" {
-    when    = create
     command = self.triggers.decompress_command
   }
 
