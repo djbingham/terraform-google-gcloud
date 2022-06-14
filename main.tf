@@ -101,7 +101,6 @@ resource "null_resource" "download_gcloud" {
   }, var.create_cmd_triggers)
 
   provisioner "local-exec" {
-    when    = create
     command = self.triggers.download_gcloud_command
   }
 
