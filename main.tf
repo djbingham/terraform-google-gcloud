@@ -101,6 +101,7 @@ resource "null_resource" "download_gcloud" {
   }, var.create_cmd_triggers)
 
   provisioner "local-exec" {
+    when    = create
     command = self.triggers.download_gcloud_command
   }
 
@@ -117,6 +118,7 @@ resource "null_resource" "download_jq" {
   }, var.create_cmd_triggers)
 
   provisioner "local-exec" {
+    when    = create
     command = self.triggers.download_jq_command
   }
 
@@ -135,6 +137,7 @@ resource "null_resource" "decompress" {
   }, var.create_cmd_triggers)
 
   provisioner "local-exec" {
+    when    = create
     command = self.triggers.decompress_command
   }
 
@@ -335,4 +338,55 @@ resource "null_resource" "decompress_destroy" {
     when    = destroy
     command = self.triggers.decompress_wrapper
   }
+}
+
+resource "null_resource" "download_jq_destroy" {
+  count = (var.enabled && !local.skip_download) ? 1 : 0
+
+  triggers = merge({
+    md5                 = md5(var.create_cmd_entrypoint)
+    arguments           = md5(var.create_cmd_body)
+    download_jq_command = local.download_jq_command
+  }, var.create_cmd_triggers)
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = self.triggers.download_jq_command
+  }
+
+  depends_on = [null_resource.decompress_destroy]
+}
+
+resource "null_resource" "download_gcloud_destroy" {
+  count = (var.enabled && !local.skip_download) ? 1 : 0
+
+  triggers = merge({
+    md5                     = md5(var.create_cmd_entrypoint)
+    arguments               = md5(var.create_cmd_body)
+    download_gcloud_command = local.download_gcloud_command
+  }, var.create_cmd_triggers)
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = self.triggers.download_gcloud_command
+  }
+
+  depends_on = [null_resource.decompress_destroy]
+}
+
+resource "null_resource" "prepare_cache_destroy" {
+  count = (var.enabled && !local.skip_download) ? 1 : 0
+
+  triggers = merge({
+    md5                   = md5(var.create_cmd_entrypoint)
+    arguments             = md5(var.create_cmd_body)
+    prepare_cache_command = local.prepare_cache_command
+  }, var.create_cmd_triggers)
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = self.triggers.prepare_cache_command
+  }
+
+  depends_on = [null_resource.module_depends_on]
 }
