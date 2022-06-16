@@ -54,6 +54,8 @@ locals {
   create_cmd_triggers = merge({
     md5                     = md5(var.create_cmd_entrypoint)
     arguments               = md5(var.create_cmd_body)
+    create_cmd_entrypoint   = var.create_cmd_entrypoint
+    create_cmd_body         = var.create_cmd_body
     decompress_wrapper      = local.decompress_wrapper
     download_jq_command     = local.download_jq_command
     download_gcloud_command = local.download_gcloud_command
@@ -62,13 +64,11 @@ locals {
   }, var.create_cmd_triggers)
 
   destroy_cmd_triggers = merge({
-    md5                     = md5(var.destroy_cmd_entrypoint)
-    arguments               = md5(var.destroy_cmd_body)
-    decompress_wrapper      = local.decompress_wrapper
-    download_jq_command     = local.download_jq_command
-    download_gcloud_command = local.download_gcloud_command
-    prepare_cache_command   = local.prepare_cache_command
-  }, var.create_cmd_triggers)
+    destroy_md5              = md5(var.destroy_cmd_entrypoint)
+    destroy_arguments        = md5(var.destroy_cmd_body)
+    destroy_cmd_entrypoint   = var.destroy_cmd_entrypoint
+    destroy_cmd_body         = var.destroy_cmd_body
+  }, local.create_cmd_triggers)
 }
 
 resource "random_id" "cache" {
