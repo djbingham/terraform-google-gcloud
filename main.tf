@@ -105,7 +105,10 @@ resource "null_resource" "install_gcloud" {
     null_resource.gcloud_auth_google_credentials_destroy
   ]
 
-  triggers = local.create_cmd_triggers
+  triggers = merge(
+    local.create_cmd_triggers,
+    local.destroy_cmd_triggers
+  )
 
   provisioner "local-exec" {
     command = self.triggers.prepare_cache_command
