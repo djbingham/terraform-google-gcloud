@@ -51,6 +51,24 @@ locals {
     ${local.gcloud} auth activate-service-account --key-file ${local.tmp_credentials_path}
   EOT
 
+  create_cmd_triggers = merge({
+    md5                     = md5(var.create_cmd_entrypoint)
+    arguments               = md5(var.create_cmd_body)
+    decompress_wrapper      = local.decompress_wrapper
+    download_jq_command     = local.download_jq_command
+    download_gcloud_command = local.download_gcloud_command
+    gcloud_bin_abs_path     = local.gcloud_bin_abs_path
+    prepare_cache_command   = local.prepare_cache_command
+  }, var.create_cmd_triggers)
+
+  destroy_cmd_triggers = merge({
+    md5                     = md5(var.destroy_cmd_entrypoint)
+    arguments               = md5(var.destroy_cmd_body)
+    decompress_wrapper      = local.decompress_wrapper
+    download_jq_command     = local.download_jq_command
+    download_gcloud_command = local.download_gcloud_command
+    prepare_cache_command   = local.prepare_cache_command
+  }, var.create_cmd_triggers)
 }
 
 resource "random_id" "cache" {
@@ -80,14 +98,7 @@ resource "null_resource" "install_gcloud" {
 
   depends_on = [null_resource.module_depends_on]
 
-  triggers = merge({
-    md5                 = md5(var.create_cmd_entrypoint)
-    arguments           = md5(var.create_cmd_body)
-    decompress_wrapper = local.decompress_wrapper
-    download_jq_command = local.download_jq_command
-    download_gcloud_command = local.download_gcloud_command
-    prepare_cache_command = local.prepare_cache_command
-  }, var.create_cmd_triggers)
+  triggers = local.create_cmd_triggers
 
   provisioner "local-exec" {
     when    = create
@@ -116,10 +127,8 @@ resource "null_resource" "upgrade" {
   depends_on = [null_resource.install_gcloud]
 
   triggers = merge({
-    md5             = md5(var.create_cmd_entrypoint)
-    arguments       = md5(var.create_cmd_body)
     upgrade_command = local.upgrade_command
-  }, var.create_cmd_triggers)
+  }, local.create_cmd_triggers)
 
   provisioner "local-exec" {
     when    = create
@@ -133,10 +142,8 @@ resource "null_resource" "additional_components" {
   depends_on = [null_resource.install_gcloud, null_resource.upgrade]
 
   triggers = merge({
-    md5                           = md5(var.create_cmd_entrypoint)
-    arguments                     = md5(var.create_cmd_body)
     additional_components_command = local.additional_components_command
-  }, var.create_cmd_triggers)
+  }, local.create_cmd_triggers)
 
   provisioner "local-exec" {
     when    = create
@@ -150,10 +157,8 @@ resource "null_resource" "gcloud_auth_service_account_key_file" {
   depends_on = [null_resource.install_gcloud, null_resource.upgrade]
 
   triggers = merge({
-    md5                                          = md5(var.create_cmd_entrypoint)
-    arguments                                    = md5(var.create_cmd_body)
     gcloud_auth_service_account_key_file_command = local.gcloud_auth_service_account_key_file_command
-  }, var.create_cmd_triggers)
+  }, local.create_cmd_triggers)
 
   provisioner "local-exec" {
     when    = create
@@ -167,10 +172,8 @@ resource "null_resource" "gcloud_auth_google_credentials" {
   depends_on = [null_resource.install_gcloud, null_resource.upgrade]
 
   triggers = merge({
-    md5                                    = md5(var.create_cmd_entrypoint)
-    arguments                              = md5(var.create_cmd_body)
     gcloud_auth_google_credentials_command = local.gcloud_auth_google_credentials_command
-  }, var.create_cmd_triggers)
+  }, local.create_cmd_triggers)
 
   provisioner "local-exec" {
     when    = create
@@ -189,13 +192,7 @@ resource "null_resource" "run_command" {
     null_resource.gcloud_auth_service_account_key_file
   ]
 
-  triggers = merge({
-    md5                   = md5(var.create_cmd_entrypoint)
-    arguments             = md5(var.create_cmd_body)
-    create_cmd_entrypoint = var.create_cmd_entrypoint
-    create_cmd_body       = var.create_cmd_body
-    gcloud_bin_abs_path   = local.gcloud_bin_abs_path
-  }, var.create_cmd_triggers)
+  triggers = local.create_cmd_triggers
 
   provisioner "local-exec" {
     when    = create
@@ -214,13 +211,7 @@ resource "null_resource" "run_destroy_command" {
     null_resource.module_depends_on
   ]
 
-  triggers = merge({
-    md5                    = md5(var.destroy_cmd_entrypoint)
-    arguments              = md5(var.destroy_cmd_body)
-    destroy_cmd_entrypoint = var.destroy_cmd_entrypoint
-    destroy_cmd_body       = var.destroy_cmd_body
-    gcloud_bin_abs_path    = local.gcloud_bin_abs_path
-  }, var.create_cmd_triggers)
+  triggers = local.destroy_cmd_triggers
 
   provisioner "local-exec" {
     when    = destroy
@@ -238,9 +229,9 @@ resource "null_resource" "gcloud_auth_google_credentials_destroy" {
 
   depends_on = [null_resource.run_destroy_command]
 
-  triggers = {
+  triggers = merge({
     gcloud_auth_google_credentials_command = local.gcloud_auth_google_credentials_command
-  }
+  }, local.destroy_cmd_triggers)
 
   provisioner "local-exec" {
     when    = destroy
@@ -253,9 +244,9 @@ resource "null_resource" "gcloud_auth_service_account_key_file_destroy" {
 
   depends_on = [null_resource.run_destroy_command]
 
-  triggers = {
+  triggers = merge({
     gcloud_auth_service_account_key_file_command = local.gcloud_auth_service_account_key_file_command
-  }
+  }, local.destroy_cmd_triggers)
 
   provisioner "local-exec" {
     when    = destroy
@@ -268,9 +259,9 @@ resource "null_resource" "additional_components_destroy" {
 
   depends_on = [null_resource.run_destroy_command]
 
-  triggers = {
+  triggers = merge({
     additional_components_command = local.additional_components_command
-  }
+  }, local.destroy_cmd_triggers)
 
   provisioner "local-exec" {
     when    = destroy
@@ -287,9 +278,9 @@ resource "null_resource" "upgrade_destroy" {
     null_resource.gcloud_auth_google_credentials_destroy
   ]
 
-  triggers = {
+  triggers = merge({
     upgrade_command = local.upgrade_command
-  }
+  }, local.destroy_cmd_triggers)
 
   provisioner "local-exec" {
     when    = destroy
@@ -302,14 +293,7 @@ resource "null_resource" "install_gcloud_destroy" {
 
   depends_on = [null_resource.upgrade_destroy]
 
-  triggers = merge({
-    md5                 = md5(var.destroy_cmd_entrypoint)
-    arguments           = md5(var.destroy_cmd_body)
-    decompress_wrapper = local.decompress_wrapper
-    download_jq_command = local.download_jq_command
-    download_gcloud_command = local.download_gcloud_command
-    prepare_cache_command = local.prepare_cache_command
-  }, var.create_cmd_triggers)
+  triggers = local.destroy_cmd_triggers
 
   provisioner "local-exec" {
     when    = destroy
