@@ -61,6 +61,7 @@ locals {
     download_gcloud_command = local.download_gcloud_command
     gcloud_bin_abs_path     = local.gcloud_bin_abs_path
     prepare_cache_command   = local.prepare_cache_command
+    upgrade_command         = local.upgrade_command
   }, var.create_cmd_triggers)
 
   destroy_cmd_triggers = merge({
@@ -96,7 +97,13 @@ data "external" "env_override" {
 resource "null_resource" "install_gcloud" {
   count = (var.enabled && !local.skip_download) ? 1 : 0
 
-  depends_on = [null_resource.module_depends_on]
+  depends_on = [
+    null_resource.module_depends_on,
+    // Ensure destroy steps run after gcloud is installed (dependency order is reversed on destroy)
+    null_resource.additional_components_destroy,
+    null_resource.gcloud_auth_service_account_key_file_destroy,
+    null_resource.gcloud_auth_google_credentials_destroy
+  ]
 
   triggers = local.create_cmd_triggers
 
@@ -119,27 +126,17 @@ resource "null_resource" "install_gcloud" {
     when    = create
     command = self.triggers.decompress_wrapper
   }
-}
-
-resource "null_resource" "upgrade" {
-  count = (var.enabled && var.upgrade && !local.skip_download) ? 1 : 0
-
-  depends_on = [null_resource.install_gcloud]
-
-  triggers = merge({
-    upgrade_command = local.upgrade_command
-  }, local.create_cmd_triggers)
 
   provisioner "local-exec" {
     when    = create
-    command = self.triggers.upgrade_command
+    command = var.upgrade && self.triggers.upgrade_command
   }
 }
 
 resource "null_resource" "additional_components" {
   count      = var.enabled && length(var.additional_components) > 0 ? 1 : 0
 
-  depends_on = [null_resource.install_gcloud, null_resource.upgrade]
+  depends_on = [null_resource.install_gcloud]
 
   triggers = merge({
     additional_components_command = local.additional_components_command
@@ -154,7 +151,7 @@ resource "null_resource" "additional_components" {
 resource "null_resource" "gcloud_auth_service_account_key_file" {
   count      = var.enabled && length(var.service_account_key_file) > 0 ? 1 : 0
 
-  depends_on = [null_resource.install_gcloud, null_resource.upgrade]
+  depends_on = [null_resource.install_gcloud]
 
   triggers = merge({
     gcloud_auth_service_account_key_file_command = local.gcloud_auth_service_account_key_file_command
@@ -169,7 +166,7 @@ resource "null_resource" "gcloud_auth_service_account_key_file" {
 resource "null_resource" "gcloud_auth_google_credentials" {
   count      = var.enabled && var.use_tf_google_credentials_env_var ? 1 : 0
 
-  depends_on = [null_resource.install_gcloud, null_resource.upgrade]
+  depends_on = [null_resource.install_gcloud]
 
   triggers = merge({
     gcloud_auth_google_credentials_command = local.gcloud_auth_google_credentials_command
@@ -201,7 +198,6 @@ resource "null_resource" "run_command" {
     ${self.triggers.create_cmd_entrypoint} ${self.triggers.create_cmd_body}
     EOT
   }
-
 }
 
 resource "null_resource" "run_destroy_command" {
@@ -222,7 +218,7 @@ resource "null_resource" "run_destroy_command" {
   }
 }
 
-// Destroy provision steps in opposite depdenency order
+// Destroy provision steps in opposite depenency order
 // so they run before `run_destroy_command` on destroy
 resource "null_resource" "gcloud_auth_google_credentials_destroy" {
   count      = var.enabled && var.use_tf_google_credentials_env_var ? 1 : 0
@@ -266,52 +262,5 @@ resource "null_resource" "additional_components_destroy" {
   provisioner "local-exec" {
     when    = destroy
     command = self.triggers.additional_components_command
-  }
-}
-
-resource "null_resource" "upgrade_destroy" {
-  count = (var.enabled && var.upgrade && !local.skip_download) ? 1 : 0
-
-  depends_on = [
-    null_resource.additional_components_destroy,
-    null_resource.gcloud_auth_service_account_key_file_destroy,
-    null_resource.gcloud_auth_google_credentials_destroy
-  ]
-
-  triggers = merge({
-    upgrade_command = local.upgrade_command
-  }, local.destroy_cmd_triggers)
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = self.triggers.upgrade_command
-  }
-}
-
-resource "null_resource" "install_gcloud_destroy" {
-  count = (var.enabled && !local.skip_download) ? 1 : 0
-
-  depends_on = [null_resource.upgrade_destroy]
-
-  triggers = local.destroy_cmd_triggers
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = self.triggers.prepare_cache_command
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = self.triggers.download_jq_command
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = self.triggers.download_gcloud_command
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = self.triggers.decompress_wrapper
   }
 }
