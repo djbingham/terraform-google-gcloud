@@ -15,35 +15,32 @@
  */
 
 locals {
-  tmp_credentials_path = "${path.module}/terraform-google-credentials.json"
-  cache_path           = local.skip_download ? "" : "${path.module}/cache/${random_id.cache[0].hex}"
-  gcloud_tar_path      = "${local.cache_path}/google-cloud-sdk.tar.gz"
-  gcloud_bin_path      = "${local.cache_path}/google-cloud-sdk/bin"
-  gcloud_bin_abs_path  = abspath(local.gcloud_bin_path)
-  components           = join(",", var.additional_components)
+  tmp_credentials_path  = "${path.module}/terraform-google-credentials.json"
+  cache_path            = local.skip_download ? "" : "${path.module}/cache/${random_id.cache[0].hex}"
+  cache_path_gcloud_tar = "${local.cache_path}/google-cloud-sdk.tar.gz"
+  cache_path_jq         = "${local.cache_path}/jq"
+  bin_path              = abspath("${local.cache_path}/google-cloud-sdk/bin")
+  bin_path_gcloud       = "${local.bin_path}/gcloud"
+  bin_path_jq           = "${local.bin_path}/jq"
+  components            = join(",", var.additional_components)
 
   download_override = var.enabled ? data.external.env_override[0].result.download : ""
   skip_download     = local.download_override == "always" ? false : (local.download_override == "never" ? true : var.skip_download)
 
-  gcloud              = local.skip_download ? "gcloud" : "${local.gcloud_bin_path}/gcloud"
+  gcloud              = local.skip_download ? "gcloud" : local.bin_path_gcloud
   gcloud_download_url = var.gcloud_download_url != "" ? var.gcloud_download_url : "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${var.gcloud_sdk_version}-${var.platform}-x86_64.tar.gz"
-  jq_platform         = var.platform == "darwin" ? "osx-amd" : var.platform
-  jq_download_url     = var.jq_download_url != "" ? var.jq_download_url : "https://github.com/stedolan/jq/releases/download/jq-${var.jq_version}/jq-${local.jq_platform}64"
 
-  create_cmd_bin  = local.skip_download ? var.create_cmd_entrypoint : "${local.gcloud_bin_path}/${var.create_cmd_entrypoint}"
-  destroy_cmd_bin = local.skip_download ? var.destroy_cmd_entrypoint : "${local.gcloud_bin_path}/${var.destroy_cmd_entrypoint}"
+  jq_platform     = var.platform == "darwin" ? "osx-amd" : var.platform
+  jq_download_url = var.jq_download_url != "" ? var.jq_download_url : "https://github.com/stedolan/jq/releases/download/jq-${var.jq_version}/jq-${local.jq_platform}64"
 
-  wait = length(null_resource.additional_components.*.triggers) + length(
-    null_resource.gcloud_auth_service_account_key_file.*.triggers,
-    ) + length(null_resource.gcloud_auth_google_credentials.*.triggers,
-  ) + length(null_resource.run_command.*.triggers) + length(null_resource.run_destroy_command.*.triggers)
+  #  Steps to install gcloud SDK
+  prepare_cache_command   = "mkdir -p ${local.cache_path}"
+  download_gcloud_command = "curl -sL -o ${local.cache_path_gcloud_tar} ${local.gcloud_download_url}"
+  download_jq_command     = "curl -sL -o ${local.cache_path_jq} ${local.jq_download_url} && chmod +x ${local.cache_path_jq}"
+  decompress_command      = "tar -xzf ${local.cache_path_gcloud_tar} -C ${local.cache_path} && cp ${local.cache_path_jq} ${local.bin_path_jq}"
+  upgrade_command         = var.upgrade ? "${local.gcloud} components update --quiet" : ""
 
-  prepare_cache_command                        = "mkdir -p ${local.cache_path}"
-  download_gcloud_command                      = "curl -sL -o ${local.cache_path}/google-cloud-sdk.tar.gz ${local.gcloud_download_url}"
-  download_jq_command                          = "curl -sL -o ${local.cache_path}/jq ${local.jq_download_url} && chmod +x ${local.cache_path}/jq"
-  decompress_command                           = "tar -xzf ${local.gcloud_tar_path} -C ${local.cache_path} && cp ${local.cache_path}/jq ${local.cache_path}/google-cloud-sdk/bin/"
-  decompress_wrapper                           = fileexists(local.gcloud_tar_path) ? local.decompress_command : "${local.prepare_cache_command} && ${local.download_gcloud_command} && ${local.download_jq_command} && ${local.decompress_command}"
-  upgrade_command                              = var.upgrade ? "${local.gcloud} components update --quiet" : ""
+  # Optional steps to prepare gcloud environment
   additional_components_command                = "${path.module}/scripts/check_components.sh ${local.gcloud} ${local.components}"
   gcloud_auth_service_account_key_file_command = "${local.gcloud} auth activate-service-account --key-file ${var.service_account_key_file}"
   gcloud_auth_google_credentials_command       = <<-EOT
@@ -51,20 +48,33 @@ locals {
     ${local.gcloud} auth activate-service-account --key-file ${local.tmp_credentials_path}
   EOT
 
+  # Triggers for executing the requested commands
   create_cmd_triggers = merge({
-    md5                     = md5(var.create_cmd_entrypoint)
-    arguments               = md5(var.create_cmd_body)
-    create_cmd_entrypoint   = var.create_cmd_entrypoint
-    create_cmd_body         = var.create_cmd_body
-    gcloud_bin_abs_path     = local.gcloud_bin_abs_path
+    md5                   = md5(var.create_cmd_entrypoint)
+    arguments             = md5(var.create_cmd_body)
+    create_cmd_entrypoint = var.create_cmd_entrypoint
+    create_cmd_body       = var.create_cmd_body
+    bin_path              = local.bin_path
   }, var.create_cmd_triggers)
 
   destroy_cmd_triggers = merge({
-    destroy_md5              = md5(var.destroy_cmd_entrypoint)
-    destroy_arguments        = md5(var.destroy_cmd_body)
-    destroy_cmd_entrypoint   = var.destroy_cmd_entrypoint
-    destroy_cmd_body         = var.destroy_cmd_body
+    destroy_md5            = md5(var.destroy_cmd_entrypoint)
+    destroy_arguments      = md5(var.destroy_cmd_body)
+    destroy_cmd_entrypoint = var.destroy_cmd_entrypoint
+    destroy_cmd_body       = var.destroy_cmd_body
   }, local.create_cmd_triggers)
+
+  # Outputs (not used internally)
+  create_cmd_bin  = local.skip_download ? var.create_cmd_entrypoint : "${local.bin_path}/${var.create_cmd_entrypoint}"
+  destroy_cmd_bin = local.skip_download ? var.destroy_cmd_entrypoint : "${local.bin_path}/${var.destroy_cmd_entrypoint}"
+
+  wait = <<-EOT
+    ${length(null_resource.additional_components.*.triggers)} +
+    ${length(null_resource.gcloud_auth_service_account_key_file.*.triggers, )} +
+    ${length(null_resource.gcloud_auth_google_credentials.*.triggers, )} +
+    ${length(null_resource.run_command.*.triggers)} +
+    ${length(null_resource.run_destroy_command.*.triggers)}
+  EOT
 }
 
 resource "random_id" "cache" {
@@ -86,7 +96,7 @@ data "external" "env_override" {
 
   program = ["${path.module}/scripts/check_env.sh"]
 
-  query   = {}
+  query = {}
 }
 
 resource "null_resource" "install_gcloud" {
@@ -102,11 +112,11 @@ resource "null_resource" "install_gcloud" {
 
   triggers = merge(
     {
-      decompress_wrapper      = local.decompress_wrapper
-      download_jq_command     = local.download_jq_command
-      download_gcloud_command = local.download_gcloud_command
-      prepare_cache_command   = local.prepare_cache_command
-      upgrade_command         = local.upgrade_command
+      decompress_command                           = local.decompress_command
+      download_jq_command                          = local.download_jq_command
+      download_gcloud_command                      = local.download_gcloud_command
+      prepare_cache_command                        = local.prepare_cache_command
+      upgrade_command                              = local.upgrade_command
       gcloud_auth_google_credentials_command       = local.gcloud_auth_google_credentials_command
       gcloud_auth_service_account_key_file_command = local.gcloud_auth_service_account_key_file_command
       additional_components_command                = local.additional_components_command
@@ -117,7 +127,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = self.triggers.prepare_cache_command
+    command = !fileexists(local.cache_path) ? self.triggers.prepare_cache_command : ""
   }
 
   provisioner "local-exec" {
@@ -127,7 +137,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = self.triggers.download_jq_command
+    command = !fileexists("${local.cache_path_jq}") ? self.triggers.download_jq_command : ""
   }
 
   provisioner "local-exec" {
@@ -137,7 +147,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = self.triggers.download_gcloud_command
+    command = !fileexists(local.cache_path_gcloud_tar) ? self.triggers.download_gcloud_command : ""
   }
 
   provisioner "local-exec" {
@@ -147,12 +157,12 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = self.triggers.decompress_wrapper
+    command = !fileexists("${local.bin_path_gcloud}") || !fileexists("${local.bin_path_jq}") ? self.triggers.decompress_command : ""
   }
 
   provisioner "local-exec" {
     when    = destroy
-    command = self.triggers.decompress_wrapper
+    command = self.triggers.decompress_command
   }
 
   provisioner "local-exec" {
@@ -167,7 +177,7 @@ resource "null_resource" "install_gcloud" {
 }
 
 resource "null_resource" "additional_components" {
-  count      = var.enabled && length(var.additional_components) > 0 ? 1 : 0
+  count = var.enabled && length(var.additional_components) > 0 ? 1 : 0
 
   depends_on = [null_resource.install_gcloud]
 
@@ -182,7 +192,7 @@ resource "null_resource" "additional_components" {
 }
 
 resource "null_resource" "gcloud_auth_service_account_key_file" {
-  count      = var.enabled && length(var.service_account_key_file) > 0 ? 1 : 0
+  count = var.enabled && length(var.service_account_key_file) > 0 ? 1 : 0
 
   depends_on = [null_resource.install_gcloud]
 
@@ -197,7 +207,7 @@ resource "null_resource" "gcloud_auth_service_account_key_file" {
 }
 
 resource "null_resource" "gcloud_auth_google_credentials" {
-  count      = var.enabled && var.use_tf_google_credentials_env_var ? 1 : 0
+  count = var.enabled && var.use_tf_google_credentials_env_var ? 1 : 0
 
   depends_on = [null_resource.install_gcloud]
 
@@ -227,7 +237,7 @@ resource "null_resource" "run_command" {
   provisioner "local-exec" {
     when    = create
     command = <<-EOT
-    PATH=${self.triggers.gcloud_bin_abs_path}:$PATH
+    PATH=${self.triggers.bin_path}:$PATH
     ${self.triggers.create_cmd_entrypoint} ${self.triggers.create_cmd_body}
     EOT
   }
@@ -245,7 +255,7 @@ resource "null_resource" "run_destroy_command" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
-    PATH=${self.triggers.gcloud_bin_abs_path}:$PATH
+    PATH=${self.triggers.bin_path}:$PATH
     ${self.triggers.destroy_cmd_entrypoint} ${self.triggers.destroy_cmd_body}
     EOT
   }
@@ -254,7 +264,7 @@ resource "null_resource" "run_destroy_command" {
 // Destroy provision steps in opposite depenency order
 // so they run before `run_destroy_command` on destroy
 resource "null_resource" "gcloud_auth_google_credentials_destroy" {
-  count      = var.enabled && var.use_tf_google_credentials_env_var ? 1 : 0
+  count = var.enabled && var.use_tf_google_credentials_env_var ? 1 : 0
 
   depends_on = [null_resource.run_destroy_command]
 
@@ -269,7 +279,7 @@ resource "null_resource" "gcloud_auth_google_credentials_destroy" {
 }
 
 resource "null_resource" "gcloud_auth_service_account_key_file_destroy" {
-  count      = var.enabled && length(var.service_account_key_file) > 0 ? 1 : 0
+  count = var.enabled && length(var.service_account_key_file) > 0 ? 1 : 0
 
   depends_on = [null_resource.run_destroy_command]
 
@@ -284,7 +294,7 @@ resource "null_resource" "gcloud_auth_service_account_key_file_destroy" {
 }
 
 resource "null_resource" "additional_components_destroy" {
-  count      = var.enabled && length(var.additional_components) > 0 ? 1 : 0
+  count = var.enabled && length(var.additional_components) > 0 ? 1 : 0
 
   depends_on = [null_resource.run_destroy_command]
 
