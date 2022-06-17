@@ -116,22 +116,52 @@ resource "null_resource" "install_gcloud" {
   )
 
   provisioner "local-exec" {
+    when    = "create"
     command = self.triggers.prepare_cache_command
   }
 
   provisioner "local-exec" {
+    when    = "destroy"
+    command = self.triggers.prepare_cache_command
+  }
+
+  provisioner "local-exec" {
+    when    = "create"
     command = self.triggers.download_jq_command
   }
 
   provisioner "local-exec" {
+    when    = "destroy"
+    command = self.triggers.download_jq_command
+  }
+
+  provisioner "local-exec" {
+    when    = "create"
     command = self.triggers.download_gcloud_command
   }
 
   provisioner "local-exec" {
+    when    = "destroy"
+    command = self.triggers.download_gcloud_command
+  }
+
+  provisioner "local-exec" {
+    when    = "create"
     command = self.triggers.decompress_wrapper
   }
 
   provisioner "local-exec" {
+    when    = "destroy"
+    command = self.triggers.decompress_wrapper
+  }
+
+  provisioner "local-exec" {
+    when    = "create"
+    command = var.upgrade ? self.triggers.upgrade_command : ""
+  }
+
+  provisioner "local-exec" {
+    when    = "destroy"
     command = var.upgrade ? self.triggers.upgrade_command : ""
   }
 }
