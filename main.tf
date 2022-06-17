@@ -16,10 +16,11 @@
 
 locals {
   tmp_credentials_path  = "${path.module}/terraform-google-credentials.json"
-  cache_path            = local.skip_download ? "" : abspath("${path.module}/cache/${random_id.cache[0].hex}")
+  cache_path            = local.skip_download ? "" : "${path.module}/cache/${random_id.cache[0].hex}"
   cache_path_gcloud_tar = "${local.cache_path}/google-cloud-sdk.tar.gz"
   cache_path_jq         = "${local.cache_path}/jq"
   bin_path              = "${local.cache_path}/google-cloud-sdk/bin"
+  bin_abs_path          = abspath(local.bin_path)
   bin_path_gcloud       = "${local.bin_path}/gcloud"
   bin_path_jq           = "${local.bin_path}/jq"
   components            = join(",", var.additional_components)
@@ -54,7 +55,7 @@ locals {
     arguments             = md5(var.create_cmd_body)
     create_cmd_entrypoint = var.create_cmd_entrypoint
     create_cmd_body       = var.create_cmd_body
-    bin_path              = local.bin_path
+    bin_abs_path          = local.bin_abs_path
   }, var.create_cmd_triggers)
 
   destroy_cmd_triggers = merge({
@@ -237,7 +238,7 @@ resource "null_resource" "run_command" {
   provisioner "local-exec" {
     when    = create
     command = <<-EOT
-    PATH=${self.triggers.bin_path}:$PATH
+    PATH=${self.triggers.bin_abs_path}:$PATH
     ${self.triggers.create_cmd_entrypoint} ${self.triggers.create_cmd_body}
     EOT
   }
@@ -255,7 +256,7 @@ resource "null_resource" "run_destroy_command" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
-    PATH=${self.triggers.bin_path}:$PATH
+    PATH=${self.triggers.bin_abs_path}:$PATH
     ${self.triggers.destroy_cmd_entrypoint} ${self.triggers.destroy_cmd_body}
     EOT
   }
