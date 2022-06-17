@@ -43,7 +43,7 @@ locals {
   download_jq_command                          = "curl -sL -o ${local.cache_path}/jq ${local.jq_download_url} && chmod +x ${local.cache_path}/jq"
   decompress_command                           = "tar -xzf ${local.gcloud_tar_path} -C ${local.cache_path} && cp ${local.cache_path}/jq ${local.cache_path}/google-cloud-sdk/bin/"
   decompress_wrapper                           = fileexists(local.gcloud_tar_path) ? local.decompress_command : "${local.prepare_cache_command} && ${local.download_gcloud_command} && ${local.download_jq_command} && ${local.decompress_command}"
-  upgrade_command                              = "${local.gcloud} components update --quiet"
+  upgrade_command                              = var.upgrade ? "${local.gcloud} components update --quiet" : ""
   additional_components_command                = "${path.module}/scripts/check_components.sh ${local.gcloud} ${local.components}"
   gcloud_auth_service_account_key_file_command = "${local.gcloud} auth activate-service-account --key-file ${var.service_account_key_file}"
   gcloud_auth_google_credentials_command       = <<-EOT
@@ -116,53 +116,53 @@ resource "null_resource" "install_gcloud" {
   )
 
   provisioner "local-exec" {
-    when    = "create"
+    when    = create
     command = self.triggers.prepare_cache_command
   }
 
   provisioner "local-exec" {
-    when    = "destroy"
+    when    = destroy
     command = self.triggers.prepare_cache_command
   }
 
   provisioner "local-exec" {
-    when    = "create"
+    when    = create
     command = self.triggers.download_jq_command
   }
 
   provisioner "local-exec" {
-    when    = "destroy"
+    when    = destroy
     command = self.triggers.download_jq_command
   }
 
   provisioner "local-exec" {
-    when    = "create"
+    when    = create
     command = self.triggers.download_gcloud_command
   }
 
   provisioner "local-exec" {
-    when    = "destroy"
+    when    = destroy
     command = self.triggers.download_gcloud_command
   }
 
   provisioner "local-exec" {
-    when    = "create"
+    when    = create
     command = self.triggers.decompress_wrapper
   }
 
   provisioner "local-exec" {
-    when    = "destroy"
+    when    = destroy
     command = self.triggers.decompress_wrapper
   }
 
   provisioner "local-exec" {
-    when    = "create"
-    command = var.upgrade ? self.triggers.upgrade_command : ""
+    when    = create
+    command = self.triggers.upgrade_command
   }
 
   provisioner "local-exec" {
-    when    = "destroy"
-    command = var.upgrade ? self.triggers.upgrade_command : ""
+    when    = destroy
+    command = self.triggers.upgrade_command
   }
 }
 
