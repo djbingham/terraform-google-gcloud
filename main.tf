@@ -157,7 +157,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = !fileexists("${local.bin_path_gcloud}") || !fileexists("${local.bin_path_jq}") ? self.triggers.decompress_command : ""
+    command = !(fileexists("${local.bin_path_gcloud}") && fileexists("${local.bin_path_jq}")) ? self.triggers.decompress_command : ""
   }
 
   provisioner "local-exec" {
