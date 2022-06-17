@@ -132,7 +132,7 @@ resource "null_resource" "install_gcloud" {
   }
 
   provisioner "local-exec" {
-    command = var.upgrade && self.triggers.upgrade_command
+    command = var.upgrade ? self.triggers.upgrade_command : ""
   }
 }
 
