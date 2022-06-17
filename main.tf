@@ -56,12 +56,6 @@ locals {
     arguments               = md5(var.create_cmd_body)
     create_cmd_entrypoint   = var.create_cmd_entrypoint
     create_cmd_body         = var.create_cmd_body
-    decompress_wrapper      = local.decompress_wrapper
-    download_jq_command     = local.download_jq_command
-    download_gcloud_command = local.download_gcloud_command
-    gcloud_bin_abs_path     = local.gcloud_bin_abs_path
-    prepare_cache_command   = local.prepare_cache_command
-    upgrade_command         = local.upgrade_command
   }, var.create_cmd_triggers)
 
   destroy_cmd_triggers = merge({
@@ -106,6 +100,17 @@ resource "null_resource" "install_gcloud" {
   ]
 
   triggers = merge(
+    {
+      decompress_wrapper      = local.decompress_wrapper
+      download_jq_command     = local.download_jq_command
+      download_gcloud_command = local.download_gcloud_command
+      gcloud_bin_abs_path     = local.gcloud_bin_abs_path
+      prepare_cache_command   = local.prepare_cache_command
+      upgrade_command         = local.upgrade_command
+      gcloud_auth_google_credentials_command       = local.gcloud_auth_google_credentials_command
+      gcloud_auth_service_account_key_file_command = local.gcloud_auth_service_account_key_file_command
+      additional_components_command                = local.additional_components_command
+    },
     local.create_cmd_triggers,
     local.destroy_cmd_triggers
   )
