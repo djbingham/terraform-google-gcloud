@@ -128,7 +128,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = !fileexists(local.cache_path) ? self.triggers.prepare_cache_command : ""
+    command = self.triggers.prepare_cache_command
   }
 
   provisioner "local-exec" {
