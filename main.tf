@@ -38,7 +38,7 @@ locals {
   prepare_cache_command   = "mkdir -p ${local.cache_path}"
   download_gcloud_command = "curl -sL -o ${local.cache_path_gcloud_tar} ${local.gcloud_download_url}"
   download_jq_command     = "curl -sL -o ${local.cache_path_jq} ${local.jq_download_url} && chmod +x ${local.cache_path_jq}"
-  decompress_command      = "tar -xzf ${local.cache_path_gcloud_tar} -C ${local.cache_path} && cp ${local.cache_path_jq} ${local.bin_path_jq}"
+  decompress_command      = "tar -xzf ${local.cache_path_gcloud_tar} -C ${local.cache_path}/ && cp ${local.cache_path_jq} ${local.bin_path}/"
   upgrade_command         = var.upgrade ? "${local.gcloud} components update --quiet" : ""
 
   # Optional steps to prepare gcloud environment
