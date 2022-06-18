@@ -39,7 +39,7 @@ locals {
   download_gcloud_command = "curl -sL -o ${local.cache_path_gcloud_tar} ${local.gcloud_download_url}"
   download_jq_command     = "curl -sL -o ${local.cache_path_jq} ${local.jq_download_url} && chmod +x ${local.cache_path_jq}"
   decompress_command      = "tar -xzf ${local.cache_path_gcloud_tar} -C ${local.cache_path}/ && cp ${local.cache_path_jq} ${local.bin_path}/"
-  upgrade_command         = var.upgrade ? "${local.gcloud} components update --quiet" : ""
+  upgrade_command         = var.upgrade ? "${local.gcloud} components update --quiet" : ":"
 
   # Optional steps to prepare gcloud environment
   additional_components_command                = "${path.module}/scripts/check_components.sh ${local.gcloud} ${local.components}"
@@ -138,7 +138,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = !fileexists("${local.cache_path_jq}") ? self.triggers.download_jq_command : ""
+    command = !fileexists("${local.cache_path_jq}") ? self.triggers.download_jq_command : ":"
   }
 
   provisioner "local-exec" {
@@ -148,7 +148,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = !fileexists(local.cache_path_gcloud_tar) ? self.triggers.download_gcloud_command : ""
+    command = !fileexists(local.cache_path_gcloud_tar) ? self.triggers.download_gcloud_command : ":"
   }
 
   provisioner "local-exec" {
@@ -158,7 +158,7 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = !(fileexists("${local.bin_path_gcloud}") && fileexists("${local.bin_path_jq}")) ? self.triggers.decompress_command : ""
+    command = !(fileexists("${local.bin_path_gcloud}") && fileexists("${local.bin_path_jq}")) ? self.triggers.decompress_command : ":"
   }
 
   provisioner "local-exec" {
