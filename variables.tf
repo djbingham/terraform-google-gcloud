@@ -21,13 +21,19 @@ variable "enabled" {
 }
 
 variable "upgrade" {
-  description = "Whether to upgrade gcloud at runtime"
+  description = "Whether to upgrade gcloud at runtime."
   type        = bool
   default     = true
 }
 
 variable "skip_download" {
-  description = "Whether to skip downloading gcloud (assumes gcloud is already available outside the module)"
+  description = "Whether to skip downloading gcloud (assumes gcloud is already available outside the module)."
+  type        = bool
+  default     = true
+}
+
+variable "TF_VAR_GCLOUD_DOWNLOAD" {
+  description = "Whether to force downloading gcloud (overrides the skip_download variable, may be set as an environment variable)."
   type        = bool
   default     = true
 }
@@ -65,12 +71,12 @@ variable "destroy_cmd_body" {
 }
 
 variable "additional_components" {
-  description = "Additional gcloud CLI components to install. Defaults to none. Valid value are components listed in `gcloud components list`"
+  description = "Additional gcloud CLI components to install. Defaults to none. Valid value are components listed in `gcloud components list`."
   default     = []
 }
 
 variable "platform" {
-  description = "Platform CLI will run on. Defaults to linux. Valid values: linux, darwin"
+  description = "Platform CLI will run on. Defaults to linux. Valid values: linux, darwin."
   default     = "linux"
 }
 

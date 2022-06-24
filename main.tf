@@ -25,7 +25,7 @@ locals {
   bin_path_jq           = "${local.bin_path}/jq"
   components            = join(",", var.additional_components)
 
-  download_override = var.enabled ? data.external.env_override[0].result.download : ""
+  download_override = var.enabled ? var.TF_VAR_GCLOUD_DOWNLOAD : ""
   skip_download     = local.download_override == "always" ? false : (local.download_override == "never" ? true : var.skip_download)
 
   gcloud              = local.skip_download ? "gcloud" : local.bin_path_gcloud
@@ -90,14 +90,6 @@ resource "null_resource" "module_depends_on" {
   triggers = {
     value = length(var.module_depends_on)
   }
-}
-
-data "external" "env_override" {
-  count = var.enabled ? 1 : 0
-
-  program = ["${path.module}/scripts/check_env.sh"]
-
-  query = {}
 }
 
 resource "null_resource" "install_gcloud" {

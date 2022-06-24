@@ -33,7 +33,7 @@ By default, this module assumes you already have gcloud installed in your $PATH.
 
 If you need to run Terraform in environments without a gcloud binary available, you can override this behavior by setting the `skip_download` variable to `false`.
 
-You can also override the behavior by setting the `GCLOUD_TF_DOWNLOAD` environment variable.
+You can also override the behavior by setting the `TF_VAR_GCLOUD_DOWNLOAD` environment variable.
 This environment variable will override all other settings.
 Setting it to `never` will *never* gcloud download and setting it to `always` will always download gcloud.
 
@@ -42,7 +42,8 @@ Setting it to `never` will *never* gcloud download and setting it to `always` wi
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| additional\_components | Additional gcloud CLI components to install. Defaults to none. Valid value are components listed in `gcloud components list` | `list` | `[]` | no |
+| TF\_VAR\_GCLOUD\_DOWNLOAD | Whether to force downloading gcloud (overrides the skip\_download variable, may be set as an environment variable). | `bool` | `true` | no |
+| additional\_components | Additional gcloud CLI components to install. Defaults to none. Valid value are components listed in `gcloud components list`. | `list` | `[]` | no |
 | create\_cmd\_body | On create, the command body you'd like to run with your entrypoint. | `string` | `"info"` | no |
 | create\_cmd\_entrypoint | On create, the command entrypoint you'd like to use. Can also be set to a custom script. Module's bin directory will be prepended to path. | `string` | `"gcloud"` | no |
 | create\_cmd\_triggers | List of any additional triggers to re-run the create command execution when either of values in the maps change. Some keys are reserved and will be overwritten if specified in this option. (eg. `md5`, `arguments`, `download_gcloud_command`, `download_jq_command`, etc. See details in [the source](https://github.com/terraform-google-modules/terraform-google-gcloud/blob/master/main.tf).) | `map(any)` | `{}` | no |
@@ -54,10 +55,10 @@ Setting it to `never` will *never* gcloud download and setting it to `always` wi
 | jq\_download\_url | Custom jq download url. Optional. | `string` | `""` | no |
 | jq\_version | The jq version to download. | `string` | `"1.6"` | no |
 | module\_depends\_on | List of modules or resources this module depends on. | `list(any)` | `[]` | no |
-| platform | Platform CLI will run on. Defaults to linux. Valid values: linux, darwin | `string` | `"linux"` | no |
+| platform | Platform CLI will run on. Defaults to linux. Valid values: linux, darwin. | `string` | `"linux"` | no |
 | service\_account\_key\_file | Path to service account key file to run `gcloud auth activate-service-account` with. Optional. | `string` | `""` | no |
-| skip\_download | Whether to skip downloading gcloud (assumes gcloud is already available outside the module) | `bool` | `true` | no |
-| upgrade | Whether to upgrade gcloud at runtime | `bool` | `true` | no |
+| skip\_download | Whether to skip downloading gcloud (assumes gcloud is already available outside the module). | `bool` | `true` | no |
+| upgrade | Whether to upgrade gcloud at runtime. | `bool` | `true` | no |
 | use\_tf\_google\_credentials\_env\_var | Use `GOOGLE_CREDENTIALS` environment variable to run `gcloud auth activate-service-account` with. Optional. | `bool` | `false` | no |
 
 ## Outputs
