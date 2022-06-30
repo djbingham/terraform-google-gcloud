@@ -35,7 +35,7 @@ variable "skip_download" {
 variable "TF_VAR_GCLOUD_DOWNLOAD" {
   description = "Whether to force downloading gcloud (overrides the skip_download variable, may be set as an environment variable)."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "module_depends_on" {
