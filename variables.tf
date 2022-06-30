@@ -38,12 +38,6 @@ variable "TF_VAR_GCLOUD_DOWNLOAD" {
   default     = false
 }
 
-variable "cache_path" {
-  description = "Path to the local folder where temporary files should be stored."
-  type        = string
-  default     = "${path.module}/cache/${random_id.cache[0].hex}"
-}
-
 variable "module_depends_on" {
   description = "List of modules or resources this module depends on."
   type        = list(any)
@@ -116,4 +110,10 @@ variable "jq_download_url" {
   description = "Custom jq download url. Optional."
   type        = string
   default     = ""
+}
+
+variable "cache_path" {
+  description = "Override the location where temporary files should be stored. Defaults to a randomly generated local folder."
+  type        = string
+  default     = null
 }
