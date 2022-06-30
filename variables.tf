@@ -38,6 +38,12 @@ variable "TF_VAR_GCLOUD_DOWNLOAD" {
   default     = false
 }
 
+variable "cache_path" {
+  description = "Path to the local folder where temporary files should be stored."
+  type        = string
+  default     = "${path.module}/cache/${random_id.cache[0].hex}"
+}
+
 variable "module_depends_on" {
   description = "List of modules or resources this module depends on."
   type        = list(any)

@@ -16,7 +16,7 @@
 
 locals {
   tmp_credentials_path  = "${path.module}/terraform-google-credentials.json"
-  cache_path            = local.skip_download ? "" : "${path.module}/cache/${random_id.cache[0].hex}"
+  cache_path            = local.skip_download ? "" : var.cache_path
   cache_path_gcloud_tar = "${local.cache_path}/google-cloud-sdk.tar.gz"
   cache_path_jq         = "${local.cache_path}/jq"
   bin_path              = "${local.cache_path}/google-cloud-sdk/bin"
