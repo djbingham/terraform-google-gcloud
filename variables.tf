@@ -113,7 +113,7 @@ variable "jq_download_url" {
 }
 
 variable "cache_path" {
-  description = "Override the location where temporary files should be stored. Defaults to a randomly generated local folder."
+  description = "Override the location gcloud should be installed to. Use to prevent multiple downloads when this module is used more than once in a single apply."
   type        = string
   default     = null
 }

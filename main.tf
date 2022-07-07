@@ -105,6 +105,10 @@ resource "null_resource" "install_gcloud" {
 
   triggers = merge(
     {
+      bin_path_gcloud                              = local.bin_path_gcloud
+      bin_path_jq                                  = local.bin_path_jq
+      cache_path_gcloud_tar                        = local.cache_path_gcloud_tar
+      cache_path_jq                                = local.cache_path_jq
       decompress_command                           = local.decompress_command
       download_jq_command                          = local.download_jq_command
       download_gcloud_command                      = local.download_gcloud_command
@@ -130,32 +134,32 @@ resource "null_resource" "install_gcloud" {
 
   provisioner "local-exec" {
     when    = create
-    command = !fileexists("${local.cache_path_jq}") ? self.triggers.download_jq_command : ":"
+    command = !fileexists("${self.triggers.cache_path_jq}") ? self.triggers.download_jq_command : ":"
   }
 
   provisioner "local-exec" {
     when    = destroy
-    command = self.triggers.download_jq_command
+    command = !fileexists("${self.triggers.cache_path_jq}") ? self.triggers.download_jq_command : ":"
   }
 
   provisioner "local-exec" {
     when    = create
-    command = !fileexists(local.cache_path_gcloud_tar) ? self.triggers.download_gcloud_command : ":"
+    command = !fileexists(self.triggers.cache_path_gcloud_tar) ? self.triggers.download_gcloud_command : ":"
   }
 
   provisioner "local-exec" {
     when    = destroy
-    command = self.triggers.download_gcloud_command
+    command = !fileexists(self.triggers.cache_path_gcloud_tar) ? self.triggers.download_gcloud_command : ":"
   }
 
   provisioner "local-exec" {
     when    = create
-    command = !(fileexists("${local.bin_path_gcloud}") && fileexists("${local.bin_path_jq}")) ? self.triggers.decompress_command : ":"
+    command = !(fileexists("${self.triggers.bin_path_gcloud}") && fileexists("${self.triggers.bin_path_jq}")) ? self.triggers.decompress_command : ":"
   }
 
   provisioner "local-exec" {
     when    = destroy
-    command = self.triggers.decompress_command
+    command = !(fileexists("${self.triggers.bin_path_gcloud}") && fileexists("${self.triggers.bin_path_jq}")) ? self.triggers.decompress_command : ":"
   }
 
   provisioner "local-exec" {
