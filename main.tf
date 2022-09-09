@@ -54,7 +54,6 @@ locals {
     arguments             = md5(var.create_cmd_body)
     create_cmd_entrypoint = var.create_cmd_entrypoint
     create_cmd_body       = var.create_cmd_body
-    bin_abs_path          = local.bin_path
     bin_path              = local.bin_path
   }, var.create_cmd_triggers)
 
