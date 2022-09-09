@@ -49,20 +49,26 @@ locals {
   EOT
 
   # Triggers for executing the requested commands
-  create_cmd_triggers = merge({
-    md5                   = md5(var.create_cmd_entrypoint)
-    arguments             = md5(var.create_cmd_body)
-    create_cmd_entrypoint = var.create_cmd_entrypoint
-    create_cmd_body       = var.create_cmd_body
-    bin_path              = local.bin_path
-  }, var.create_cmd_triggers)
+  create_cmd_triggers = merge(
+    {
+      md5                   = md5(var.create_cmd_entrypoint)
+      arguments             = md5(var.create_cmd_body)
+      create_cmd_entrypoint = var.create_cmd_entrypoint
+      create_cmd_body       = var.create_cmd_body
+      bin_path              = local.bin_path
+    },
+    var.create_cmd_triggers
+  )
 
-  destroy_cmd_triggers = merge({
-    destroy_md5            = md5(var.destroy_cmd_entrypoint)
-    destroy_arguments      = md5(var.destroy_cmd_body)
-    destroy_cmd_entrypoint = var.destroy_cmd_entrypoint
-    destroy_cmd_body       = var.destroy_cmd_body
-  }, local.create_cmd_triggers)
+  destroy_cmd_triggers = merge(
+    {
+      destroy_md5            = md5(var.destroy_cmd_entrypoint)
+      destroy_arguments      = md5(var.destroy_cmd_body)
+      destroy_cmd_entrypoint = var.destroy_cmd_entrypoint
+      destroy_cmd_body       = var.destroy_cmd_body
+    },
+    local.create_cmd_triggers
+  )
 
   # Outputs (not used internally)
   create_cmd_bin  = local.skip_download ? var.create_cmd_entrypoint : "${local.bin_path}/${var.create_cmd_entrypoint}"
