@@ -234,7 +234,7 @@ resource "null_resource" "run_command" {
   provisioner "local-exec" {
     when    = create
     command = <<-EOT
-    PATH=${self.triggers.bin_abs_path}:$PATH
+    PATH=${self.triggers.bin_path}:$PATH
     ${self.triggers.create_cmd_entrypoint} ${self.triggers.create_cmd_body}
     EOT
   }
@@ -252,7 +252,7 @@ resource "null_resource" "run_destroy_command" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
-    PATH=${self.triggers.bin_abs_path}:$PATH
+    PATH=${self.triggers.bin_path}:$PATH
     ${self.triggers.destroy_cmd_entrypoint} ${self.triggers.destroy_cmd_body}
     EOT
   }
