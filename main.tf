@@ -54,6 +54,7 @@ locals {
     arguments             = md5(var.create_cmd_body)
     create_cmd_entrypoint = var.create_cmd_entrypoint
     create_cmd_body       = var.create_cmd_body
+    bin_abs_path          = local.bin_path
     bin_path              = local.bin_path
   }, var.create_cmd_triggers)
 
@@ -233,7 +234,7 @@ resource "null_resource" "run_command" {
   provisioner "local-exec" {
     when    = create
     command = <<-EOT
-    PATH=${self.triggers.bin_path}:$PATH
+    PATH=${self.triggers.bin_abs_path}:$PATH
     ${self.triggers.create_cmd_entrypoint} ${self.triggers.create_cmd_body}
     EOT
   }
@@ -251,7 +252,7 @@ resource "null_resource" "run_destroy_command" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
-    PATH=${self.triggers.bin_path}:$PATH
+    PATH=${self.triggers.bin_abs_path}:$PATH
     ${self.triggers.destroy_cmd_entrypoint} ${self.triggers.destroy_cmd_body}
     EOT
   }
